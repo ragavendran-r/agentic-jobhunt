@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  agentic-jobhunt:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./resume.pdf:/app/resume.pdf
+    env_file:
+      - .env
+    restart: unless-stopped
