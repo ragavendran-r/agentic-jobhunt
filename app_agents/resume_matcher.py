@@ -4,11 +4,13 @@ Scores job descriptions against candidate resume using RAG + graph-based workflo
 """
 
 from typing import TypedDict, Annotated
+from urllib import response
 from langgraph.graph import StateGraph, END
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.messages import HumanMessage
+from langgraph.graph.state import CompiledStateGraph
 import PyPDF2
 import json
 import os
@@ -45,8 +47,7 @@ def build_vector_store(resume_text: str) -> Chroma:
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = splitter.split_text(resume_text)
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
-        google_api_key=settings.google_api_key,
+        model="models/gemini-embedding-001",
     )
     return Chroma.from_texts(
         texts=chunks,
@@ -80,8 +81,7 @@ def score_job(state: MatcherState) -> MatcherState:
 
     # RAG: retrieve most relevant resume sections for this JD
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
-        google_api_key=settings.google_api_key,
+        model="models/gemini-embedding-001",
     )
     vector_store = Chroma.from_texts(
         texts=state["resume_chunks"],
@@ -111,8 +111,12 @@ def score_job(state: MatcherState) -> MatcherState:
     """
 
     response = llm.invoke([HumanMessage(content=prompt)])
+    # response.content can be str or list — normalize to str first
+    content = response.content if isinstance(response.content, str) else str(response.content)
+    # Strip markdown code fences if present
+    content = content.replace("```json", "").replace("```", "").strip()
     try:
-        analysis = json.loads(response.content)
+        analysis = json.loads(content)
     except json.JSONDecodeError:
         analysis = {"match_score": 50, "recommendation": "Consider", "raw": response.content}
 
@@ -147,7 +151,7 @@ def should_continue_scoring(state: MatcherState) -> str:
 # ── Build Graph ───────────────────────────────────────────────────────────────
 
 
-def build_matcher_graph() -> StateGraph:
+def build_matcher_graph() -> CompiledStateGraph:
     graph = StateGraph(MatcherState)
 
     graph.add_node("load_resume", load_resume)

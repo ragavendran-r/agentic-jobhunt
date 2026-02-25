@@ -32,9 +32,9 @@ def match_resume(job_descriptions: list[dict], resume_path: str) -> dict:
     return run_resume_matcher(job_descriptions=job_descriptions, resume_path=resume_path)
 
 
-def draft_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
+async def draft_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
     """Draft personalized cold outreach messages and cover letters for top matches."""
-    return run_outreach(matched_jobs=matched_jobs, candidate_name=candidate_name)
+    return await run_outreach(matched_jobs=matched_jobs, candidate_name=candidate_name)
 
 
 def track_applications(jobs: list[dict]) -> dict:

@@ -60,7 +60,9 @@ def draft_linkedin_message(company: str, role: str, hiring_manager: str, fit_rea
 
 
 @function_tool
-def draft_cover_letter(company: str, role: str, job_description: str, matching_skills: list) -> str:
+def draft_cover_letter(
+    company: str, role: str, job_description: str, matching_skills: list[str]
+) -> str:
     """Draft a tailored cover letter for a specific job application."""
     skills_str = ", ".join(matching_skills[:5]) if matching_skills else "Golang, AWS, Kubernetes"
     return f"""
@@ -113,7 +115,7 @@ outreach_agent = Agent(
 # ── Public Interface ──────────────────────────────────────────────────────────
 
 
-def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
+async def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
     """
     Draft outreach messages for all matched jobs.
 
@@ -147,7 +149,7 @@ def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
     2. A cover letter (under 300 words)
     """
 
-    result = Runner.run_sync(outreach_agent, prompt)
+    result = await Runner.run(outreach_agent, prompt)
     output_text = result.final_output
 
     outreach_list = []
@@ -171,6 +173,7 @@ def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
 # ── Standalone Test ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import asyncio
     from rich.console import Console
     from rich.panel import Panel
 
@@ -189,7 +192,7 @@ if __name__ == "__main__":
         }
     ]
 
-    result = run_outreach(sample_matches, "Ragavendran Ramalingam")
+    result = asyncio.run(run_outreach(sample_matches, "Ragavendran Ramalingam"))
     console.print(
         Panel(
             result["outreach"][0]["outreach_content"] if result["outreach"] else "No output",

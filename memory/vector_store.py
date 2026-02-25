@@ -18,7 +18,7 @@ from config.settings import settings
 def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     """Return the embedding model instance."""
     return GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
+        model="models/gemini-embedding-001",
         google_api_key=settings.google_api_key,  # type: ignore
     )
 

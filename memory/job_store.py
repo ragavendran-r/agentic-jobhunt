@@ -6,8 +6,9 @@ Stores and manages job application records.
 import os
 import json
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text, Float
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy import String, Integer, DateTime, Text, Float, create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session, Mapped, mapped_column
+from typing import Optional, Generator
 from contextlib import contextmanager
 
 from config.settings import settings
@@ -15,28 +16,29 @@ from config.settings import settings
 
 # ── ORM Model ─────────────────────────────────────────────────────────────────
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class JobApplication(Base):
     __tablename__ = "job_applications"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    company = Column(String(200), nullable=False)
-    title = Column(String(200), nullable=False)
-    url = Column(String(500))
-    location = Column(String(200))
-    salary = Column(String(100))
-    source = Column(String(100))          # LinkedIn, Naukri, etc.
-    match_score = Column(Float)           # 0-100
-    matching_skills = Column(Text)        # JSON list
-    missing_skills = Column(Text)         # JSON list
-    status = Column(String(50), default="To Apply")
-    applied_date = Column(DateTime)
-    follow_up_date = Column(DateTime)
-    notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company: Mapped[str] = mapped_column(String(200), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    url: Mapped[Optional[str]] = mapped_column(String(500))
+    location: Mapped[Optional[str]] = mapped_column(String(200))
+    salary: Mapped[Optional[str]] = mapped_column(String(100))
+    source: Mapped[Optional[str]] = mapped_column(String(100))
+    match_score: Mapped[Optional[float]] = mapped_column(Float)
+    matching_skills: Mapped[Optional[str]] = mapped_column(Text)
+    missing_skills: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[Optional[str]] = mapped_column(String(50), default="To Apply")
+    applied_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    follow_up_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
 
     def to_dict(self) -> dict:
         return {
@@ -60,6 +62,7 @@ class JobApplication(Base):
 
 # ── Database Setup ────────────────────────────────────────────────────────────
 
+
 def _get_engine():
     os.makedirs(os.path.dirname(os.path.abspath(settings.db_path)), exist_ok=True)
     engine = create_engine(
@@ -71,7 +74,7 @@ def _get_engine():
 
 
 @contextmanager
-def get_session() -> Session:
+def get_session() -> Generator[Session, None, None]:
     """Context manager for database sessions."""
     engine = _get_engine()
     SessionLocal = sessionmaker(bind=engine)
@@ -88,6 +91,7 @@ def get_session() -> Session:
 
 # ── CRUD Operations ───────────────────────────────────────────────────────────
 
+
 def log_job_to_db(
     company: str,
     title: str,
@@ -96,8 +100,8 @@ def log_job_to_db(
     salary: str = "",
     location: str = "",
     source: str = "",
-    matching_skills: list = None,
-    missing_skills: list = None,
+    matching_skills: Optional[list] = None,
+    missing_skills: Optional[list] = None,
     notes: str = "",
 ) -> dict:
     """
@@ -108,10 +112,14 @@ def log_job_to_db(
     """
     with get_session() as session:
         # Check for duplicate
-        existing = session.query(JobApplication).filter(
-            JobApplication.company == company,
-            JobApplication.title == title,
-        ).first()
+        existing = (
+            session.query(JobApplication)
+            .filter(
+                JobApplication.company == company,
+                JobApplication.title == title,
+            )
+            .first()
+        )
 
         if existing:
             return {"message": f"Already tracked: {title} at {company}", "id": existing.id}
@@ -137,14 +145,25 @@ def log_job_to_db(
 
 def update_job_status(company: str, new_status: str, notes: str = "") -> dict:
     """Update the status of a job application."""
-    valid_statuses = ["To Apply", "Applied", "Phone Screen", "Interview", "Offer", "Rejected", "Withdrawn"]
+    valid_statuses = [
+        "To Apply",
+        "Applied",
+        "Phone Screen",
+        "Interview",
+        "Offer",
+        "Rejected",
+        "Withdrawn",
+    ]
     if new_status not in valid_statuses:
         return {"error": f"Invalid status. Use one of: {valid_statuses}"}
 
     with get_session() as session:
-        job = session.query(JobApplication).filter(
-            JobApplication.company == company
-        ).order_by(JobApplication.created_at.desc()).first()
+        job = (
+            session.query(JobApplication)
+            .filter(JobApplication.company == company)
+            .order_by(JobApplication.created_at.desc())
+            .first()
+        )
 
         if not job:
             return {"error": f"No application found for {company}"}
@@ -162,7 +181,7 @@ def update_job_status(company: str, new_status: str, notes: str = "") -> dict:
         return {"message": f"Updated {company} → {new_status}"}
 
 
-def get_all_jobs(status_filter: str = None) -> list[dict]:
+def get_all_jobs(status_filter: Optional[str] = None) -> list[dict]:
     """Get all tracked jobs, optionally filtered by status."""
     with get_session() as session:
         query = session.query(JobApplication)
@@ -191,13 +210,15 @@ def get_jobs_summary() -> dict:
             if job.match_score:
                 scores.append(job.match_score)
             if job.match_score and job.match_score >= 75:
-                summary["top_matches"].append({
-                    "company": job.company,
-                    "title": job.title,
-                    "match_score": job.match_score,
-                    "status": job.status,
-                    "url": job.url,
-                })
+                summary["top_matches"].append(
+                    {
+                        "company": job.company,
+                        "title": job.title,
+                        "match_score": job.match_score,
+                        "status": job.status,
+                        "url": job.url,
+                    }
+                )
 
         summary["avg_match_score"] = round(sum(scores) / len(scores), 1) if scores else 0
         summary["top_matches"].sort(key=lambda x: x["match_score"], reverse=True)
@@ -208,9 +229,11 @@ def get_jobs_summary() -> dict:
 def get_pending_followups() -> list[dict]:
     """Get jobs that need follow-up (Applied/Interview for 5+ days)."""
     with get_session() as session:
-        jobs = session.query(JobApplication).filter(
-            JobApplication.status.in_(["Applied", "Phone Screen", "Interview"])
-        ).all()
+        jobs = (
+            session.query(JobApplication)
+            .filter(JobApplication.status.in_(["Applied", "Phone Screen", "Interview"]))
+            .all()
+        )
 
         reminders = []
         now = datetime.utcnow()
@@ -220,14 +243,16 @@ def get_pending_followups() -> list[dict]:
             if ref_date:
                 days_elapsed = (now - ref_date).days
                 if days_elapsed >= 5:
-                    reminders.append({
-                        "company": job.company,
-                        "title": job.title,
-                        "status": job.status,
-                        "days_elapsed": days_elapsed,
-                        "url": job.url,
-                        "action": "Send follow-up message",
-                    })
+                    reminders.append(
+                        {
+                            "company": job.company,
+                            "title": job.title,
+                            "status": job.status,
+                            "days_elapsed": days_elapsed,
+                            "url": job.url,
+                            "action": "Send follow-up message",
+                        }
+                    )
 
         return sorted(reminders, key=lambda x: x["days_elapsed"], reverse=True)
 
@@ -235,9 +260,7 @@ def get_pending_followups() -> list[dict]:
 def delete_job(company: str) -> dict:
     """Delete a job application record."""
     with get_session() as session:
-        job = session.query(JobApplication).filter(
-            JobApplication.company == company
-        ).first()
+        job = session.query(JobApplication).filter(JobApplication.company == company).first()
         if not job:
             return {"error": f"No record found for {company}"}
         session.delete(job)
@@ -254,9 +277,30 @@ if __name__ == "__main__":
     console.print("[bold blue]💾 Testing Job Store...[/bold blue]")
 
     # Log test jobs
-    log_job_to_db("Freshworks", "Engineering Manager", "https://freshworks.com", match_score=85, salary="70-90 LPA", location="Chennai")
-    log_job_to_db("Chargebee", "Engineering Manager", "https://chargebee.com", match_score=78, salary="65-80 LPA", location="Chennai")
-    log_job_to_db("Kissflow", "Engineering Manager", "https://kissflow.com", match_score=72, salary="60-75 LPA", location="Chennai")
+    log_job_to_db(
+        "Freshworks",
+        "Engineering Manager",
+        "https://freshworks.com",
+        match_score=85,
+        salary="70-90 LPA",
+        location="Chennai",
+    )
+    log_job_to_db(
+        "Chargebee",
+        "Engineering Manager",
+        "https://chargebee.com",
+        match_score=78,
+        salary="65-80 LPA",
+        location="Chennai",
+    )
+    log_job_to_db(
+        "Kissflow",
+        "Engineering Manager",
+        "https://kissflow.com",
+        match_score=72,
+        salary="60-75 LPA",
+        location="Chennai",
+    )
 
     # Update a status
     update_job_status("Freshworks", "Applied", "Applied via LinkedIn referral")

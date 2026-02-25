@@ -75,9 +75,10 @@ def build_crew(role: str, location: str, tech_stack: list[str], min_salary: int)
     scrape_task = Task(
         description=(
             f"Search for '{role}' job openings in '{location}'. "
-            f"Look specifically on LinkedIn, Naukri, and Wellfound. "
-            f"Collect at least 15 job listings with: title, company, location, "
-            f"URL, salary (if available), and full job description snippet."
+            f"Search on LinkedIn, Naukri, and Wellfound. "
+            f"Collect job listings with these fields: title, company, location, URL, salary (put 'Not Available' if missing), description (use full description available). "
+            f"Target software engineering leadership roles only — ignore hardware, civil, mechanical engineering. "
+            f"Collect at least 10 listings."
         ),
         expected_output=(
             "A JSON list of job listings with fields: "
@@ -90,12 +91,13 @@ def build_crew(role: str, location: str, tech_stack: list[str], min_salary: int)
     filter_task = Task(
         description=(
             f"From the scraped job listings, filter and rank those that match:\n"
-            f"- Role: {role}\n"
-            f"- Tech stack mentions at least 2 of: {tech_stack}\n"
-            f"- Location: {location}\n"
-            f"- Salary >= ₹{min_salary:,} (if mentioned)\n"
-            f"- Remove duplicates and irrelevant listings.\n"
-            f"Rank by best fit first."
+            f"- Role: Must be Engineering Manager, Engineering Lead, Development Manager, or similar senior engineering leadership role\n"
+            f"- Location: {location} — include Remote roles too\n"
+            f"- Exclude clearly irrelevant roles: civil engineering, hardware, HVAC, campus internships, analyst roles\n"
+            f"- DO NOT filter on tech stack — descriptions are too short to contain this info\n"
+            f"- DO NOT filter on salary — almost never mentioned in listings\n"
+            f"- Remove duplicate companies (keep best matching title per company)\n"
+            f"Rank by seniority and relevance to software engineering leadership."
         ),
         expected_output=(
             "A ranked JSON list (max 10) of filtered jobs with fields: "

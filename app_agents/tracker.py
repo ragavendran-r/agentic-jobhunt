@@ -11,32 +11,34 @@ from langchain.tools import tool
 from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
+from typing import Optional, cast
 import json
 import os
 
 from config.settings import settings
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session, Mapped, mapped_column
+from typing import Optional
 
 
-# ── Database Setup ────────────────────────────────────────────────────────────
-
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 class JobApplication(Base):
     __tablename__ = "job_applications"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    company = Column(String(200))
-    title = Column(String(200))
-    url = Column(String(500))
-    location = Column(String(200))
-    salary = Column(String(100))
-    match_score = Column(Integer)
-    status = Column(String(50), default="To Apply")
-    applied_date = Column(DateTime)
-    follow_up_date = Column(DateTime)
-    notes = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company: Mapped[str] = mapped_column(String(200))
+    title: Mapped[str] = mapped_column(String(200))
+    url: Mapped[Optional[str]] = mapped_column(String(500))
+    location: Mapped[Optional[str]] = mapped_column(String(200))
+    salary: Mapped[Optional[str]] = mapped_column(String(100))
+    match_score: Mapped[Optional[int]] = mapped_column(Integer)
+    status: Mapped[Optional[str]] = mapped_column(String(50), default="To Apply")
+    applied_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    follow_up_date: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 def get_db_session():
@@ -139,7 +141,8 @@ def get_application_summary() -> str:
 
         for app in apps:
             summary["by_status"][app.status] = summary["by_status"].get(app.status, 0) + 1
-            if app.match_score and app.match_score >= 75:
+            score = cast(Optional[float], app.match_score)
+            if score is not None and score >= 75:
                 summary["top_matches"].append(
                     {
                         "company": app.company,
@@ -170,7 +173,9 @@ def get_followup_reminders() -> str:
 
         reminders = []
         for app in apps:
-            applied_days = (datetime.utcnow() - app.applied_date).days if app.applied_date else 0
+            applied_days = (
+                (datetime.utcnow() - app.applied_date).days if app.applied_date is not None else 0
+            )
             if applied_days >= 5:
                 reminders.append(
                     {

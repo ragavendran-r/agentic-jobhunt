@@ -8,7 +8,7 @@ from config.settings import settings
 import json
 
 
-def search_jobs(query: str, location: str, max_results: int = 10) -> list[dict]:
+def search_jobs(query: str, location: str, max_results: int = 5) -> list[dict]:
     """
     Search for job listings using Tavily.
 
@@ -22,39 +22,65 @@ def search_jobs(query: str, location: str, max_results: int = 10) -> list[dict]:
     """
     client = TavilyClient(api_key=settings.tavily_api_key)
 
-    search_query = f"{query} {location} job opening hiring 2025"
+    searches = [
+        f"{query} Golang AWS Kubernetes {location} site:linkedin.com/jobs",
+        f"{query} DevSecOps SaaS {location} site:naukri.com",
+        f"{query} Golang cloud {location} site:wellfound.com",
+        f'"{query}" Golang OR AWS OR Kubernetes {location} job hiring 2026',
+    ]
 
-    response = client.search(
-        query=search_query,
-        search_depth="advanced",
-        max_results=max_results,
-        include_domains=[
-            "linkedin.com",
-            "naukri.com",
-            "wellfound.com",
-            "indeed.com",
-            "glassdoor.com",
-            "instahyre.com",
-            "cutshort.io",
-        ],
-        include_answer=False,
-    )
-
-    results = response.get("results", [])
-
-    # Normalize results
+    all_results = []
+    for search_query in searches:
+        response = client.search(
+            query=search_query,
+            search_depth="advanced",
+            max_results=max_results,
+            include_raw_content=False,
+            include_domains=[
+                "linkedin.com",
+                "naukri.com",
+                "wellfound.com",
+                "indeed.com",
+                "glassdoor.com",
+                "instahyre.com",
+                "cutshort.io",
+            ],
+            include_answer=False,
+        )
+        all_results.extend(response.get("results", []))
+    # Deduplicate by URL
+    seen_urls = set()
     normalized = []
-    for r in results:
-        normalized.append({
-            "title": r.get("title", ""),
-            "url": r.get("url", ""),
-            "description": r.get("content", "")[:500],
-            "source": _extract_source(r.get("url", "")),
-            "score": r.get("score", 0),
-        })
+    for r in all_results:
+        url = r.get("url", "")
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
 
-    # Sort by relevance score
-    return sorted(normalized, key=lambda x: x["score"], reverse=True)
+        # Skip listing pages — only keep individual job postings
+        if any(
+            skip in url
+            for skip in [
+                "/jobs/search",
+                "/jobs/professional",
+                "jobs-in-",
+                "job-listings",
+                "/l/",
+            ]
+        ):
+            continue
+
+        normalized.append(
+            {
+                "title": r.get("title", ""),
+                "url": url,
+                "description": r.get("content", "")[:800],
+                "source": _extract_source(url),
+                "score": r.get("score", 0),
+            }
+        )
+
+    return sorted(normalized, key=lambda x: x["score"], reverse=True)[:max_results]
 
 
 def search_hiring_manager(company: str, role: str = "Engineering Manager") -> list[dict]:
