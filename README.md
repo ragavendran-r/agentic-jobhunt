@@ -34,7 +34,7 @@ User Input (Job Preferences)
 
 - **Language:** Python 3.11+
 - **Frameworks:** Google ADK, CrewAI, LangGraph, OpenAI Agents SDK, LangChain
-- **LLMs:** Gemini 1.5 Pro (ADK/CrewAI), GPT-4o (OpenAI SDK)
+- **LLMs:** Gemini 2.5 Flash (ADK/CrewAI), GPT-4o (OpenAI SDK)
 - **Vector Store:** ChromaDB (resume + JD embeddings)
 - **Storage:** SQLite (job application tracking)
 - **Search:** Tavily Search API
@@ -47,7 +47,7 @@ User Input (Job Preferences)
 
 ```
 agentic-jobhunt/
-├── agents/
+├── app_agents/
 │   ├── orchestrator.py       # Google ADK orchestrator
 │   ├── job_finder.py         # CrewAI job scraping agent
 │   ├── resume_matcher.py     # LangGraph resume scoring pipeline
@@ -108,7 +108,7 @@ cp env.example .env
 
 ```bash
 # Direct CLI
-python -m agents.orchestrator
+python -m app_agents.orchestrator
 
 # Via API
 uvicorn api.main:app --reload
@@ -134,7 +134,7 @@ LANGCHAIN_TRACING_V2=true
 ## 📋 Usage Example
 
 ```python
-from agents.orchestrator import JobHuntOrchestrator
+from app_agents.orchestrator import JobHuntOrchestrator
 
 orchestrator = JobHuntOrchestrator()
 
@@ -142,7 +142,7 @@ result = orchestrator.run({
     "role": "Engineering Manager",
     "location": "Chennai, Remote",
     "tech_stack": ["Golang", "AWS", "Kubernetes"],
-    "min_salary": 7000000,  # 70L INR
+    "min_salary": 700000,  # 7L INR
     "resume_path": "resume.pdf"
 })
 

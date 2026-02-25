@@ -3,15 +3,17 @@ Orchestrator Agent — Google ADK
 Routes job search tasks to specialized sub-agents based on user preferences.
 """
 
+import asyncio
+
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from agents.job_finder import run_job_finder
-from agents.resume_matcher import run_resume_matcher
-from agents.outreach import run_outreach
-from agents.tracker import run_tracker
+from app_agents.job_finder import run_job_finder
+from app_agents.resume_matcher import run_resume_matcher
+from app_agents.outreach import run_outreach
+from app_agents.tracker import run_tracker
 from config.settings import settings
 
 
@@ -80,8 +82,12 @@ class JobHuntOrchestrator:
         )
 
     def run(self, preferences: dict) -> dict:
+        """Sync version for CLI."""
+        return asyncio.run(self.run_async(preferences))
+
+    async def run_async(self, preferences: dict) -> dict:
         """
-        Run the full job hunt pipeline.
+        Run the full job hunt pipeline. Async version for FastAPI
 
         Args:
             preferences: {
@@ -89,13 +95,13 @@ class JobHuntOrchestrator:
                 "location": "Chennai, Remote",
                 "tech_stack": ["Golang", "AWS", "Kubernetes"],
                 "min_salary": 7000000,
-                "resume_path": "resume.pdf",
+                "resume_path": settings.resume_path,
                 "candidate_name": "Ragavendran Ramalingam"
             }
         Returns:
             dict with matched_jobs, outreach_messages, tracker_summary
         """
-        session = self.session_service.create_session(
+        session = await self.session_service.create_session(
             app_name="agentic-jobhunt",
             user_id="user_001",
         )
@@ -105,21 +111,21 @@ class JobHuntOrchestrator:
         - Role: {preferences.get('role', 'Engineering Manager')}
         - Location: {preferences.get('location', 'Chennai, Remote')}
         - Tech Stack: {preferences.get('tech_stack', [])}
-        - Minimum Salary: ₹{preferences.get('min_salary', 6500000):,}
+        - Minimum Salary: ₹{preferences.get('min_salary', 7000000):,}
         - Resume: {preferences.get('resume_path', settings.resume_path)}
         - Candidate: {preferences.get('candidate_name', 'Candidate')}
         """
 
         result_text = ""
-        for event in self.runner.run(
+        async for event in self.runner.run_async(
             user_id="user_001",
             session_id=session.id,
             new_message=types.Content(role="user", parts=[types.Part(text=prompt)]),
         ):
-            if event.is_final_response() and event.content:
+            if event.is_final_response() and event.content and event.content.parts:
                 for part in event.content.parts:
                     if hasattr(part, "text"):
-                        result_text += part.text
+                        result_text += part.text or ""
 
         return {"summary": result_text}
 

@@ -24,12 +24,14 @@ class Settings(BaseSettings):
     log_level: str = Field("INFO", env="LOG_LEVEL")  # type: ignore
 
     # Model names
-    gemini_model: str = "gemini/gemini-2.5-flash"
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_model_crew: str = "gemini/gemini-2.5-flash"
     openai_model: str = "gpt-4o"
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 settings = Settings()  # type: ignore

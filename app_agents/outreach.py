@@ -11,25 +11,33 @@ import asyncio
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
 
+
 @function_tool
 def get_candidate_profile() -> str:
     """Retrieve the candidate's profile and key highlights for personalization."""
-    return json.dumps({
-        "name": "Ragavendran Ramalingam",
-        "title": "Engineering Manager",
-        "experience_years": 21,
-        "recent_company": "CloudBees",
-        "key_skills": ["Golang", "AWS", "Kubernetes", "DevSecOps", "ReactJS"],
-        "certifications": ["CKA", "AWS Solutions Architect Professional", "Google Cloud Engineer", "OCI GenAI"],
-        "highlights": [
-            "Led 10-member team delivering SaaS DevSecOps product at CloudBees",
-            "Built Golang microservices from scratch to production in 9 months",
-            "Managed 40-member cross-functional account for Life Sciences customer",
-            "Agentic AI enthusiast with hands-on MCP and Google ADK experience",
-        ],
-        "target_salary": "70-85 LPA",
-        "location": "Chennai, open to remote",
-    })
+    return json.dumps(
+        {
+            "name": "Ragavendran Ramalingam",
+            "title": "Engineering Manager",
+            "experience_years": 21,
+            "recent_company": "CloudBees",
+            "key_skills": ["Golang", "AWS", "Kubernetes", "DevSecOps", "ReactJS"],
+            "certifications": [
+                "CKA",
+                "AWS Solutions Architect Professional",
+                "Google Cloud Engineer",
+                "OCI GenAI",
+            ],
+            "highlights": [
+                "Led 10-member team delivering SaaS DevSecOps product at CloudBees",
+                "Built Golang microservices from scratch to production in 9 months",
+                "Managed 40-member cross-functional account for Life Sciences customer",
+                "Agentic AI enthusiast with hands-on MCP and Google ADK experience",
+            ],
+            "target_salary": "70-85 LPA",
+            "location": "Chennai, open to remote",
+        }
+    )
 
 
 @function_tool
@@ -104,6 +112,7 @@ outreach_agent = Agent(
 
 # ── Public Interface ──────────────────────────────────────────────────────────
 
+
 def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
     """
     Draft outreach messages for all matched jobs.
@@ -114,16 +123,19 @@ def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
     if not matched_jobs:
         return {"outreach": [], "total_drafted": 0}
 
-    jobs_summary = json.dumps([
-        {
-            "company": j.get("company"),
-            "title": j.get("title"),
-            "description": j.get("description", "")[:300],
-            "matching_skills": j.get("matching_skills", []),
-            "fit_reason": j.get("strengths", ""),
-        }
-        for j in matched_jobs[:5]  # Top 5 only
-    ], indent=2)
+    jobs_summary = json.dumps(
+        [
+            {
+                "company": j.get("company"),
+                "title": j.get("title"),
+                "description": j.get("description", "")[:300],
+                "matching_skills": j.get("matching_skills", []),
+                "fit_reason": j.get("strengths", ""),
+            }
+            for j in matched_jobs[:5]  # Top 5 only
+        ],
+        indent=2,
+    )
 
     prompt = f"""
     Please draft personalized outreach materials for these {len(matched_jobs[:5])} job matches:
@@ -140,13 +152,15 @@ def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
 
     outreach_list = []
     for job in matched_jobs[:5]:
-        outreach_list.append({
-            "company": job.get("company"),
-            "title": job.get("title"),
-            "url": job.get("url"),
-            "match_score": job.get("match_score"),
-            "outreach_content": output_text,
-        })
+        outreach_list.append(
+            {
+                "company": job.get("company"),
+                "title": job.get("title"),
+                "url": job.get("url"),
+                "match_score": job.get("match_score"),
+                "outreach_content": output_text,
+            }
+        )
 
     return {
         "outreach": outreach_list,
@@ -176,8 +190,10 @@ if __name__ == "__main__":
     ]
 
     result = run_outreach(sample_matches, "Ragavendran Ramalingam")
-    console.print(Panel(
-        result["outreach"][0]["outreach_content"] if result["outreach"] else "No output",
-        title="✅ Outreach Draft",
-        style="green"
-    ))
+    console.print(
+        Panel(
+            result["outreach"][0]["outreach_content"] if result["outreach"] else "No output",
+            title="✅ Outreach Draft",
+            style="green",
+        )
+    )

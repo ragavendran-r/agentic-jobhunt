@@ -7,7 +7,7 @@ from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.messages import HumanMessage
 import PyPDF2
 import json
@@ -17,6 +17,7 @@ from config.settings import settings
 
 
 # ── State Definition ─────────────────────────────────────────────────────────
+
 
 class MatcherState(TypedDict):
     resume_text: str
@@ -28,6 +29,7 @@ class MatcherState(TypedDict):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def extract_resume_text(resume_path: str) -> str:
     """Extract text from a PDF resume."""
@@ -54,6 +56,7 @@ def build_vector_store(resume_text: str) -> Chroma:
 
 
 # ── Graph Nodes ───────────────────────────────────────────────────────────────
+
 
 def load_resume(state: MatcherState) -> MatcherState:
     """Node 1: Load and parse the resume PDF."""
@@ -133,6 +136,7 @@ def compile_results(state: MatcherState) -> MatcherState:
 
 # ── Conditional Edge ──────────────────────────────────────────────────────────
 
+
 def should_continue_scoring(state: MatcherState) -> str:
     """Continue scoring jobs or move to compile results."""
     if state["current_job_index"] < len(state["job_descriptions"]):
@@ -141,6 +145,7 @@ def should_continue_scoring(state: MatcherState) -> str:
 
 
 # ── Build Graph ───────────────────────────────────────────────────────────────
+
 
 def build_matcher_graph() -> StateGraph:
     graph = StateGraph(MatcherState)
@@ -158,6 +163,7 @@ def build_matcher_graph() -> StateGraph:
 
 
 # ── Public Interface ──────────────────────────────────────────────────────────
+
 
 def run_resume_matcher(job_descriptions: list[dict], resume_path: str) -> dict:
     """
@@ -215,5 +221,7 @@ if __name__ == "__main__":
     ]
 
     result = run_resume_matcher(sample_jobs, settings.resume_path)
-    console.print(f"\n[green]Matched {result['recommended']} of {result['total_scored']} jobs[/green]")
+    console.print(
+        f"\n[green]Matched {result['recommended']} of {result['total_scored']} jobs[/green]"
+    )
     print_json(data=result)

@@ -9,12 +9,14 @@ from unittest.mock import patch, MagicMock
 
 # ── Unit Tests ────────────────────────────────────────────────────────────────
 
+
 class TestResumeParser:
     """Tests for the resume parser utility."""
 
     def test_parse_resume_missing_file_returns_default(self):
         """Returns default profile when resume file not found."""
         from tools.resume_parser import parse_resume
+
         result = parse_resume("nonexistent_file.pdf")
         assert len(result) > 0
         assert "Engineering Manager" in result
@@ -22,6 +24,7 @@ class TestResumeParser:
     def test_extract_skills_finds_golang(self):
         """extract_skills finds known skills in resume text."""
         from tools.resume_parser import extract_skills
+
         resume_text = "Experienced in Golang, AWS, Kubernetes and ReactJS."
         skills = extract_skills(resume_text)
         assert "Golang" in skills
@@ -31,6 +34,7 @@ class TestResumeParser:
     def test_extract_skills_case_insensitive(self):
         """extract_skills is case insensitive."""
         from tools.resume_parser import extract_skills
+
         resume_text = "skilled in golang and kubernetes"
         skills = extract_skills(resume_text)
         assert "Golang" in skills
@@ -38,6 +42,7 @@ class TestResumeParser:
     def test_extract_skills_no_false_positives(self):
         """extract_skills doesn't return skills not in text."""
         from tools.resume_parser import extract_skills
+
         resume_text = "Experienced in Python and Django."
         skills = extract_skills(resume_text)
         assert "Golang" not in skills
@@ -49,7 +54,7 @@ class TestResumeMatcherGraph:
 
     def test_load_resume_node_populates_state(self):
         """load_resume node sets resume_text and resume_chunks."""
-        from agents.resume_matcher import load_resume
+        from app_agents.resume_matcher import load_resume
 
         initial_state = {
             "resume_text": "",
@@ -66,7 +71,7 @@ class TestResumeMatcherGraph:
 
     def test_compile_results_filters_by_score(self):
         """compile_results filters out jobs below 60% match."""
-        from agents.resume_matcher import compile_results
+        from app_agents.resume_matcher import compile_results
 
         state = {
             "resume_text": "test",
@@ -89,7 +94,7 @@ class TestResumeMatcherGraph:
 
     def test_compile_results_sorted_by_score(self):
         """compile_results returns jobs sorted highest score first."""
-        from agents.resume_matcher import compile_results
+        from app_agents.resume_matcher import compile_results
 
         state = {
             "resume_text": "test",
@@ -110,27 +115,33 @@ class TestResumeMatcherGraph:
 
     def test_should_continue_scoring_continues(self):
         """should_continue_scoring returns 'score_job' when jobs remain."""
-        from agents.resume_matcher import should_continue_scoring
+        from app_agents.resume_matcher import should_continue_scoring
 
         state = {
             "job_descriptions": [{"title": "EM"}, {"title": "EM"}],
             "current_job_index": 0,
-            "resume_text": "", "resume_chunks": [], "scored_jobs": [], "final_results": []
+            "resume_text": "",
+            "resume_chunks": [],
+            "scored_jobs": [],
+            "final_results": [],
         }
         assert should_continue_scoring(state) == "score_job"
 
     def test_should_continue_scoring_stops(self):
         """should_continue_scoring returns 'compile_results' when done."""
-        from agents.resume_matcher import should_continue_scoring
+        from app_agents.resume_matcher import should_continue_scoring
 
         state = {
             "job_descriptions": [{"title": "EM"}, {"title": "EM"}],
             "current_job_index": 2,
-            "resume_text": "", "resume_chunks": [], "scored_jobs": [], "final_results": []
+            "resume_text": "",
+            "resume_chunks": [],
+            "scored_jobs": [],
+            "final_results": [],
         }
         assert should_continue_scoring(state) == "compile_results"
 
-    @patch("agents.resume_matcher.run_resume_matcher")
+    @patch("app_agents.resume_matcher.run_resume_matcher")
     def test_run_resume_matcher_returns_structure(self, mock_run):
         """run_resume_matcher returns expected dict structure."""
         mock_run.return_value = {
@@ -139,7 +150,8 @@ class TestResumeMatcherGraph:
             "recommended": 1,
         }
 
-        from agents.resume_matcher import run_resume_matcher
+        from app_agents.resume_matcher import run_resume_matcher
+
         result = run_resume_matcher([{"company": "Freshworks"}, {"company": "LowCo"}], "resume.pdf")
 
         assert "matched_jobs" in result

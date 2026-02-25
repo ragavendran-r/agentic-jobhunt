@@ -3,8 +3,9 @@ Tracker Agent — LangChain + MCP
 Logs job applications to SQLite and tracks stages via MCP tool integration.
 """
 
+from langchain.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain.agents import create_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.tools import tool
 from sqlalchemy import create_engine, Column, String, Integer, DateTime, Text
@@ -48,6 +49,7 @@ def get_db_session():
 
 # ── LangChain MCP Tools ───────────────────────────────────────────────────────
 
+
 @tool
 def log_job_application(
     company: str,
@@ -56,7 +58,7 @@ def log_job_application(
     match_score: int,
     salary: str = "",
     location: str = "",
-    notes: str = ""
+    notes: str = "",
 ) -> str:
     """Log a job application to the SQLite tracking database."""
     session = get_db_session()
@@ -89,15 +91,26 @@ def update_application_status(company: str, new_status: str, notes: str = "") ->
     Update the status of a job application.
     Valid statuses: To Apply, Applied, Phone Screen, Interview, Offer, Rejected, Withdrawn
     """
-    valid_statuses = ["To Apply", "Applied", "Phone Screen", "Interview", "Offer", "Rejected", "Withdrawn"]
+    valid_statuses = [
+        "To Apply",
+        "Applied",
+        "Phone Screen",
+        "Interview",
+        "Offer",
+        "Rejected",
+        "Withdrawn",
+    ]
     if new_status not in valid_statuses:
         return f"❌ Invalid status. Choose from: {valid_statuses}"
 
     session = get_db_session()
     try:
-        app = session.query(JobApplication).filter(
-            JobApplication.company == company
-        ).order_by(JobApplication.created_at.desc()).first()
+        app = (
+            session.query(JobApplication)
+            .filter(JobApplication.company == company)
+            .order_by(JobApplication.created_at.desc())
+            .first()
+        )
 
         if not app:
             return f"❌ No application found for {company}"
@@ -127,12 +140,14 @@ def get_application_summary() -> str:
         for app in apps:
             summary["by_status"][app.status] = summary["by_status"].get(app.status, 0) + 1
             if app.match_score and app.match_score >= 75:
-                summary["top_matches"].append({
-                    "company": app.company,
-                    "title": app.title,
-                    "match_score": app.match_score,
-                    "status": app.status,
-                })
+                summary["top_matches"].append(
+                    {
+                        "company": app.company,
+                        "title": app.title,
+                        "match_score": app.match_score,
+                        "status": app.status,
+                    }
+                )
 
         return json.dumps(summary, indent=2)
     finally:
@@ -144,9 +159,11 @@ def get_followup_reminders() -> str:
     """Get list of applications that need follow-up action."""
     session = get_db_session()
     try:
-        apps = session.query(JobApplication).filter(
-            JobApplication.status.in_(["Applied", "Phone Screen", "Interview"])
-        ).all()
+        apps = (
+            session.query(JobApplication)
+            .filter(JobApplication.status.in_(["Applied", "Phone Screen", "Interview"]))
+            .all()
+        )
 
         if not apps:
             return "No pending follow-ups."
@@ -155,12 +172,14 @@ def get_followup_reminders() -> str:
         for app in apps:
             applied_days = (datetime.utcnow() - app.applied_date).days if app.applied_date else 0
             if applied_days >= 5:
-                reminders.append({
-                    "company": app.company,
-                    "status": app.status,
-                    "days_since_action": applied_days,
-                    "action": "Send follow-up message",
-                })
+                reminders.append(
+                    {
+                        "company": app.company,
+                        "status": app.status,
+                        "days_since_action": applied_days,
+                        "action": "Send follow-up message",
+                    }
+                )
 
         return json.dumps(reminders, indent=2) if reminders else "No follow-ups needed yet."
     finally:
@@ -169,56 +188,53 @@ def get_followup_reminders() -> str:
 
 # ── LangChain Agent ───────────────────────────────────────────────────────────
 
-def build_tracker_agent() -> AgentExecutor:
+
+def build_tracker_agent():
     llm = ChatGoogleGenerativeAI(
         model=settings.gemini_model,
         google_api_key=settings.google_api_key,
         temperature=0,
     )
 
-    tools = [log_job_application, update_application_status, get_application_summary, get_followup_reminders]
+    tools = [
+        log_job_application,
+        update_application_status,
+        get_application_summary,
+        get_followup_reminders,
+    ]
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", """
-            You are a job application tracker assistant.
-            Your job is to log new applications, update statuses, and surface follow-up reminders.
-            Always confirm what you've logged and provide a brief summary at the end.
-            Be concise and organized.
-        """),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
-
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+    return create_agent(llm, tools)
 
 
 # ── Public Interface ──────────────────────────────────────────────────────────
 
-def run_tracker(jobs: list[dict]) -> dict:
-    """
-    Log all matched jobs to the tracker database.
 
-    Returns:
-        {"logged": int, "summary": str}
-    """
+def run_tracker(jobs: list[dict]) -> dict:
     if not jobs:
         return {"logged": 0, "summary": "No jobs to track."}
 
-    executor = build_tracker_agent()
+    agent = build_tracker_agent()
 
-    jobs_text = "\n".join([
-        f"- {j.get('title')} at {j.get('company')} | Score: {j.get('match_score', 'N/A')}% | URL: {j.get('url')} | Salary: {j.get('salary', 'N/A')}"
-        for j in jobs[:10]
-    ])
+    jobs_text = "\n".join(
+        [
+            f"- {j.get('title')} at {j.get('company')} | Score: {j.get('match_score', 'N/A')}% | URL: {j.get('url')} | Salary: {j.get('salary', 'N/A')}"
+            for j in jobs[:10]
+        ]
+    )
 
-    result = executor.invoke({
-        "input": f"Please log these job applications and then give me a summary:\n{jobs_text}"
-    })
+    result = agent.invoke(
+        {
+            "messages": [
+                HumanMessage(
+                    content=f"Please log these job applications and then give me a summary:\n{jobs_text}"
+                )
+            ]
+        }
+    )
 
     return {
         "logged": len(jobs[:10]),
-        "summary": result.get("output", ""),
+        "summary": result["messages"][-1].content,
     }
 
 
@@ -232,8 +248,20 @@ if __name__ == "__main__":
     console.print("[bold blue]📊 Running Tracker Agent...[/bold blue]")
 
     sample_jobs = [
-        {"title": "Engineering Manager", "company": "Freshworks", "url": "https://freshworks.com", "match_score": 85, "salary": "70-90 LPA"},
-        {"title": "Engineering Manager", "company": "Chargebee", "url": "https://chargebee.com", "match_score": 78, "salary": "65-80 LPA"},
+        {
+            "title": "Engineering Manager",
+            "company": "Freshworks",
+            "url": "https://freshworks.com",
+            "match_score": 85,
+            "salary": "70-90 LPA",
+        },
+        {
+            "title": "Engineering Manager",
+            "company": "Chargebee",
+            "url": "https://chargebee.com",
+            "match_score": 78,
+            "salary": "65-80 LPA",
+        },
     ]
 
     result = run_tracker(sample_jobs)

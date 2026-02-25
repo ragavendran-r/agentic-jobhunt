@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from typing import Optional
 import uvicorn
 
-from agents.orchestrator import JobHuntOrchestrator
-from agents.tracker import (
+from app_agents.orchestrator import JobHuntOrchestrator
+from app_agents.tracker import (
     update_application_status,
     get_application_summary,
     get_followup_reminders,
@@ -54,7 +54,7 @@ def health():
 async def run_job_search(prefs: SearchPreferences):
     """Trigger the full multi-agent job search pipeline."""
     try:
-        result = orchestrator.run(prefs.model_dump())
+        result = await orchestrator.run_async(prefs.model_dump())
         return {"success": True, "result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

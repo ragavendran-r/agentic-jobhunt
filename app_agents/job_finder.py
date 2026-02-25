@@ -51,7 +51,7 @@ def build_crew(role: str, location: str, tech_stack: list[str], min_salary: int)
             "leadership roles on job portals."
         ),
         tools=[search_tool],
-        llm=f"{settings.gemini_model}",
+        llm=f"{settings.gemini_model_crew}",
         verbose=True,
     )
 
@@ -67,7 +67,7 @@ def build_crew(role: str, location: str, tech_stack: list[str], min_salary: int)
             "You can quickly assess whether a job description matches a candidate's "
             "technical stack and seniority level."
         ),
-        llm=f"{settings.gemini_model}",
+        llm=f"{settings.gemini_model_crew}",
         verbose=True,
     )
 

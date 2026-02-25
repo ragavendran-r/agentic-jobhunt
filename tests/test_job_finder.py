@@ -69,14 +69,14 @@ class TestSearchTool:
 class TestJobFinderAgent:
     """Integration-style tests for the Job Finder CrewAI agent."""
 
-    @patch("agents.job_finder.build_crew")
+    @patch("app_agents.job_finder.build_crew")
     def test_run_job_finder_returns_dict(self, mock_build_crew):
         """run_job_finder returns expected dict structure."""
         mock_crew = MagicMock()
         mock_crew.kickoff.return_value = '[{"title": "EM", "company": "Freshworks", "url": "http://test.com", "description": "test", "source": "LinkedIn", "fit_reason": "Good match"}]'
         mock_build_crew.return_value = mock_crew
 
-        from agents.job_finder import run_job_finder
+        from app_agents.job_finder import run_job_finder
 
         result = run_job_finder(
             role="Engineering Manager",
@@ -90,14 +90,14 @@ class TestJobFinderAgent:
         assert "top_matches" in result
         assert isinstance(result["jobs"], list)
 
-    @patch("agents.job_finder.build_crew")
+    @patch("app_agents.job_finder.build_crew")
     def test_run_job_finder_handles_invalid_json(self, mock_build_crew):
         """run_job_finder handles non-JSON crew output gracefully."""
         mock_crew = MagicMock()
         mock_crew.kickoff.return_value = "Here are the jobs: Freshworks, Chargebee"
         mock_build_crew.return_value = mock_crew
 
-        from agents.job_finder import run_job_finder
+        from app_agents.job_finder import run_job_finder
 
         result = run_job_finder("Engineering Manager", "Chennai", ["Golang"], 5000000)
 
