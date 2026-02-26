@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agentic-jobhunt — Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f8f9fb;
+    font-family: 'Inter', sans-serif;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 48px 24px 72px;
+  }
+
+  /* ── PAGE ── */
+  .page { max-width: 900px; margin: 0 auto; }
+
+  /* ── HEADER ── */
+  header { text-align: center; margin-bottom: 48px; }
+  header h1 { font-size: 1.9rem; font-weight: 700; color: #111827; letter-spacing: -0.03em; }
+  header p { margin-top: 6px; font-family: 'Fira Code', monospace; font-size: 0.75rem; color: #6b7280; }
+
+  /* ── FLOW WRAPPER ── */
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+
+  /* ── CONNECTOR (vertical arrow) ── */
+  .connector {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0; height: 44px; justify-content: center; position: relative;
+  }
+  .conn-line { width: 2px; background: #cbd5e1; flex: 1; }
+  .conn-arrow { width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #94a3b8; }
+  .conn-label {
+    position: absolute; left: calc(50% + 10px);
+    font-family: 'Fira Code', monospace; font-size: 0.62rem;
+    color: #94a3b8; white-space: nowrap; background: #f8f9fb;
+    padding: 1px 4px; border-radius: 3px;
+  }
+
+  /* ── BOX BASE ── */
+  .box {
+    border-radius: 10px;
+    border: 1.5px solid;
+    padding: 16px 20px;
+    position: relative;
+    transition: box-shadow 0.15s, transform 0.15s;
+    cursor: default;
+    background: #fff;
+  }
+  .box:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.09); }
+
+  .box-icon { font-size: 1.4rem; display: block; margin-bottom: 6px; }
+  .box-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
+  .box-sub { font-family: 'Fira Code', monospace; font-size: 0.62rem; color: #6b7280; line-height: 1.6; }
+
+  .fw-badge {
+    position: absolute; top: 12px; right: 12px;
+    font-family: 'Fira Code', monospace; font-size: 0.55rem;
+    font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 20px;
+  }
+
+  /* ── COLOR SCHEMES ── */
+  /* ADK - Blue */
+  .adk { border-color: #3b82f6; }
+  .adk .box-title { color: #1d4ed8; }
+  .adk .fw-badge { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+
+  /* CrewAI - Violet */
+  .crewai { border-color: #8b5cf6; }
+  .crewai .box-title { color: #6d28d9; }
+  .crewai .fw-badge { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+  /* LangGraph - Emerald */
+  .lg { border-color: #10b981; }
+  .lg .box-title { color: #047857; }
+  .lg .fw-badge { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+
+  /* OAI - Orange */
+  .oai { border-color: #f59e0b; }
+  .oai .box-title { color: #b45309; }
+  .oai .fw-badge { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+
+  /* LangChain - Pink */
+  .lc { border-color: #ec4899; }
+  .lc .box-title { color: #be185d; }
+  .lc .fw-badge { background: #fdf2f8; color: #db2777; border: 1px solid #fbcfe8; }
+
+  /* Infra - Gray */
+  .infra-box { border-color: #e2e8f0; background: #f8fafc; }
+  .infra-box .box-title { color: #374151; }
+  .infra-box .fw-badge { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+
+  /* Output - Slate */
+  .out-box { border-color: #64748b; background: #f8fafc; }
+  .out-box .box-title { color: #1e293b; }
+
+  /* ── SINGLE WIDE BOX ── */
+  .single { width: 340px; text-align: center; }
+  .single .box-icon { font-size: 1.7rem; }
+  .single .box-title { font-size: 1.05rem; }
+
+  /* ── FORK ── */
+  .fork-wrap {
+    width: 100%; display: flex; flex-direction: column; align-items: center;
+    height: 48px; position: relative;
+  }
+  .fork-v { width: 2px; height: 14px; background: #cbd5e1; }
+  .fork-h { height: 2px; width: 80%; background: #cbd5e1; position: absolute; top: 14px; }
+  /* end dots */
+  .fork-h::before, .fork-h::after {
+    content: ''; position: absolute; top: -3px;
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1;
+  }
+  .fork-h::before { left: 0; }
+  .fork-h::after  { right: 0; }
+  /* down lines at ends */
+  .fork-left-down, .fork-right-down {
+    position: absolute; bottom: 0; width: 2px; background: #cbd5e1;
+    height: 22px;
+  }
+  .fork-left-down  { left: 10%; }
+  .fork-right-down { right: 10%; }
+
+  /* ── 4 AGENTS GRID ── */
+  .agents-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .agents-grid .box { text-align: left; }
+
+  /* ── TAG ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; }
+  .tag {
+    font-family: 'Fira Code', monospace; font-size: 0.55rem;
+    padding: 2px 6px; border-radius: 4px;
+    background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;
+  }
+
+  /* ── GATHER ── */
+  .gather-wrap {
+    width: 100%; display: flex; flex-direction: column; align-items: center;
+    height: 48px; position: relative;
+  }
+  .gather-h { height: 2px; width: 80%; background: #cbd5e1; position: absolute; top: 0; }
+  .gather-h::before, .gather-h::after {
+    content: ''; position: absolute; top: -3px;
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1;
+  }
+  .gather-h::before { left: 0; }
+  .gather-h::after  { right: 0; }
+  .gather-v { width: 2px; height: 24px; background: #cbd5e1; position: absolute; bottom: 0; }
+  .gather-arrow { position: absolute; bottom: 0; width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 8px solid #94a3b8; }
+
+  /* ── INFRA SECTION ── */
+  .section-title {
+    width: 100%; text-align: center;
+    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #9ca3af;
+    display: flex; align-items: center; gap: 10px; margin: 4px 0;
+  }
+  .section-title hr { flex: 1; border: none; border-top: 1px dashed #e2e8f0; }
+
+  .infra-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .infra-grid .box { padding: 12px 14px; }
+  .infra-grid .box-icon { font-size: 1.1rem; margin-bottom: 4px; }
+  .infra-grid .box-title { font-size: 0.8rem; }
+
+  /* ── OUTPUT GRID ── */
+  .output-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .output-grid .box { padding: 12px 14px; text-align: center; }
+  .output-grid .box-icon { font-size: 1.1rem; margin-bottom: 4px; }
+  .output-grid .box-title { font-size: 0.78rem; color: #374151; }
+  .output-grid .box-sub { font-size: 0.6rem; }
+
+  /* ── LEGEND ── */
+  .legend {
+    margin-top: 40px; padding: 16px 24px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+  }
+  .leg { display: flex; align-items: center; gap: 7px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .leg span { font-size: 0.7rem; color: #6b7280; font-family: 'Fira Code', monospace; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .a1 { animation: up 0.35s ease 0.05s both; }
+  .a2 { animation: up 0.35s ease 0.15s both; }
+  .a3 { animation: up 0.35s ease 0.25s both; }
+  .a4 { animation: up 0.35s ease 0.35s both; }
+  .a5 { animation: up 0.35s ease 0.45s both; }
+  .a6 { animation: up 0.35s ease 0.55s both; }
+  .a7 { animation: up 0.35s ease 0.65s both; }
+  .a8 { animation: up 0.35s ease 0.75s both; }
+
+  @media (max-width: 700px) {
+    .agents-grid, .output-grid { grid-template-columns: repeat(2, 1fr); }
+    .infra-grid { grid-template-columns: repeat(2, 1fr); }
+    .single { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>🤖 agentic-jobhunt</h1>
+    <p>multi-agent job search pipeline · Google ADK · CrewAI · LangGraph · OpenAI Agents SDK · LangChain + MCP</p>
+  </header>
+
+  <div class="flow">
+
+    <!-- INPUT -->
+    <div class="single box adk a1">
+      <span class="fw-badge badge-adk">Entry Point</span>
+      <span class="box-icon">👤</span>
+      <div class="box-title">User Input</div>
+      <div class="box-sub">role · location · tech_stack · min_salary · resume_path</div>
+    </div>
+
+    <!-- ↓ -->
+    <div class="connector a1">
+      <div class="conn-line"></div>
+      <div class="conn-arrow"></div>
+    </div>
+
+    <!-- ORCHESTRATOR -->
+    <div class="single box adk a2">
+      <span class="fw-badge">Google ADK</span>
+      <span class="box-icon">🎯</span>
+      <div class="box-title">Orchestrator Agent</div>
+      <div class="box-sub">Routes tasks to sub-agents · coordinates pipeline flow</div>
+    </div>
+
+    <!-- FORK DOWN -->
+    <div class="fork-wrap a3">
+      <div class="fork-v"></div>
+      <div class="fork-h"></div>
+      <div class="fork-left-down"></div>
+      <div class="fork-right-down"></div>
+    </div>
+
+    <!-- 4 AGENTS -->
+    <div class="agents-grid a3">
+
+      <div class="box crewai">
+        <span class="fw-badge">CrewAI</span>
+        <span class="box-icon">🔍</span>
+        <div class="box-title">Job Finder</div>
+        <div class="box-sub">Scrapes LinkedIn, Naukri, Wellfound via Tavily</div>
+        <div class="tags">
+          <span class="tag">search_jobs_tavily</span>
+          <span class="tag">fetch_job_details</span>
+          <span class="tag">save_jobs_to_db</span>
+        </div>
+      </div>
+
+      <div class="box lg">
+        <span class="fw-badge">LangGraph</span>
+        <span class="box-icon">📄</span>
+        <div class="box-title">Resume Matcher</div>
+        <div class="box-sub">RAG pipeline · Gemini LLM · scores JD vs resume</div>
+        <div class="tags">
+          <span class="tag">load_resume</span>
+          <span class="tag">score_job ↺</span>
+          <span class="tag">compile_results</span>
+        </div>
+      </div>
+
+      <div class="box oai">
+        <span class="fw-badge">OpenAI SDK</span>
+        <span class="box-icon">✉️</span>
+        <div class="box-title">Outreach Drafter</div>
+        <div class="box-sub">Personalised LinkedIn messages + cover letters</div>
+        <div class="tags">
+          <span class="tag">get_candidate_profile</span>
+          <span class="tag">draft_linkedin_message</span>
+          <span class="tag">draft_cover_letter</span>
+        </div>
+      </div>
+
+      <div class="box lc">
+        <span class="fw-badge">LangChain + MCP</span>
+        <span class="box-icon">📋</span>
+        <div class="box-title">Tracker</div>
+        <div class="box-sub">Logs applications · tracks stages · sends reminders</div>
+        <div class="tags">
+          <span class="tag">log_application</span>
+          <span class="tag">update_stage</span>
+          <span class="tag">mcp_tools.py</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- GATHER BACK -->
+    <div class="gather-wrap a4">
+      <div class="gather-h"></div>
+      <div class="gather-v"></div>
+      <div class="gather-arrow"></div>
+    </div>
+
+    <!-- SHARED INFRA -->
+    <div class="section-title a5"><hr><span>shared infrastructure</span><hr></div>
+
+    <div class="infra-grid a5">
+      <div class="box infra-box">
+        <span class="fw-badge badge-infra">VectorDB</span>
+        <span class="box-icon">🔷</span>
+        <div class="box-title">ChromaDB</div>
+        <div class="box-sub">vector_store.py · resume + JD embeddings · similarity_search k=4</div>
+      </div>
+      <div class="box infra-box">
+        <span class="fw-badge badge-infra">Storage</span>
+        <span class="box-icon">🗄️</span>
+        <div class="box-title">SQLite · jobs.db</div>
+        <div class="box-sub">job_store.py · persists listings · application stages</div>
+      </div>
+      <div class="box infra-box">
+        <span class="fw-badge badge-infra">LLMs</span>
+        <span class="box-icon">✨</span>
+        <div class="box-title">Gemini 2.5 Flash / GPT-4o-mini</div>
+        <div class="box-sub">Gemini → ADK · CrewAI · LangGraph · GPT-4o → OAI SDK</div>
+      </div>
+      <div class="box infra-box">
+        <span class="fw-badge badge-infra">Search</span>
+        <span class="box-icon">🌐</span>
+        <div class="box-title">Tavily Search API</div>
+        <div class="box-sub">search_tool.py · real-time job listings · jd_scraper.py</div>
+      </div>
+      <div class="box infra-box">
+        <span class="fw-badge badge-infra">Observability</span>
+        <span class="box-icon">🔬</span>
+        <div class="box-title">LangSmith</div>
+        <div class="box-sub">Traces all 5 agents · LANGCHAIN_TRACING_V2=true</div>
+      </div>
+      <div class="box infra-box">
+        <span class="fw-badge badge-infra">Deployment</span>
+        <span class="box-icon">🐳</span>
+        <div class="box-title">FastAPI + Docker</div>
+        <div class="box-sub">api/main.py · docker-compose.yml · Dockerfile</div>
+      </div>
+    </div>
+
+    <!-- ↓ -->
+    <div class="connector a6">
+      <div class="conn-line"></div>
+      <div class="conn-arrow"></div>
+      <span class="conn-label">pipeline outputs</span>
+    </div>
+
+    <!-- OUTPUTS -->
+    <div class="output-grid a7">
+      <div class="box out-box">
+        <span class="box-icon">📊</span>
+        <div class="box-title">matched_jobs[]</div>
+        <div class="box-sub">Scored · filtered ≥60% · sorted by score · skills gap</div>
+      </div>
+      <div class="box out-box">
+        <span class="box-icon">💬</span>
+        <div class="box-title">outreach_messages[]</div>
+        <div class="box-sub">LinkedIn DM per company · &lt;200 words · personalised</div>
+      </div>
+      <div class="box out-box">
+        <span class="box-icon">📝</span>
+        <div class="box-title">cover_letters[]</div>
+        <div class="box-sub">Tailored per role · &lt;300 words · highlights fit</div>
+      </div>
+      <div class="box out-box">
+        <span class="box-icon">🗂️</span>
+        <div class="box-title">tracker_summary</div>
+        <div class="box-sub">Application log · stage tracking · reminders</div>
+      </div>
+    </div>
+
+  </div><!-- end flow -->
+
+  <!-- LEGEND -->
+  <div class="legend a8">
+    <div class="leg"><div class="leg-dot" style="background:#3b82f6"></div><span>Google ADK — Orchestrator</span></div>
+    <div class="leg"><div class="leg-dot" style="background:#8b5cf6"></div><span>CrewAI — Job Finder</span></div>
+    <div class="leg"><div class="leg-dot" style="background:#10b981"></div><span>LangGraph — Resume Matcher</span></div>
+    <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div><span>OpenAI Agents SDK — Outreach</span></div>
+    <div class="leg"><div class="leg-dot" style="background:#ec4899"></div><span>LangChain + MCP — Tracker</span></div>
+    <div class="leg"><div class="leg-dot" style="background:#94a3b8"></div><span>Shared Infrastructure</span></div>
+  </div>
+
+</div>
+</body>
+</html>

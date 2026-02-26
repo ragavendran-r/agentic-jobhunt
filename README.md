@@ -8,15 +8,9 @@ A personal Agentic AI system that autonomously finds, evaluates, and helps apply
 
 ## 🏗️ Architecture
 
-```
-User Input (Job Preferences)
-         ↓
-[Orchestrator Agent]  ←  Google ADK (routes tasks to sub-agents)
-    ↓         ↓          ↓            ↓
-[Job Finder] [Resume  [Outreach]  [Tracker]
-  CrewAI]    Matcher]   OpenAI      LangChain
-             LangGraph   SDK         + MCP
-```
+[View Architecture](https://ragavendran-r.github.io/agentic-jobhunt/architecture.html)
+
+![Architecture](docs/agentic-jobhunt-arch.png)
 
 ### Agents
 
