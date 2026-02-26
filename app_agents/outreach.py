@@ -12,8 +12,7 @@ import asyncio
 # ── Tools ─────────────────────────────────────────────────────────────────────
 
 
-@function_tool
-def get_candidate_profile() -> str:
+def _get_candidate_profile() -> str:
     """Retrieve the candidate's profile and key highlights for personalization."""
     return json.dumps(
         {
@@ -40,8 +39,10 @@ def get_candidate_profile() -> str:
     )
 
 
-@function_tool
-def draft_linkedin_message(company: str, role: str, hiring_manager: str, fit_reason: str) -> str:
+get_candidate_profile = function_tool(_get_candidate_profile)
+
+
+def _draft_linkedin_message(company: str, role: str, hiring_manager: str, fit_reason: str) -> str:
     """Draft a short LinkedIn cold outreach message to a hiring manager."""
     return f"""
     Hi {hiring_manager or 'there'},
@@ -60,7 +61,12 @@ def draft_linkedin_message(company: str, role: str, hiring_manager: str, fit_rea
 
 
 @function_tool
-def draft_cover_letter(
+def draft_linkedin_message(company: str, role: str, hiring_manager: str, fit_reason: str) -> str:
+    """Draft a short LinkedIn cold outreach message to a hiring manager."""
+    return _draft_linkedin_message(company, role, hiring_manager, fit_reason)
+
+
+def _draft_cover_letter(
     company: str, role: str, job_description: str, matching_skills: list[str]
 ) -> str:
     """Draft a tailored cover letter for a specific job application."""
@@ -89,6 +95,8 @@ def draft_cover_letter(
     +91 9921382626 | ragaven.r@gmail.com
     """
 
+
+draft_cover_letter = function_tool(_draft_cover_letter)
 
 # ── Agent ─────────────────────────────────────────────────────────────────────
 

@@ -47,7 +47,7 @@ def build_vector_store(resume_text: str) -> Chroma:
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = splitter.split_text(resume_text)
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
+        model=settings.gemini_model_embedding,
     )
     return Chroma.from_texts(
         texts=chunks,
@@ -81,7 +81,7 @@ def score_job(state: MatcherState) -> MatcherState:
 
     # RAG: retrieve most relevant resume sections for this JD
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
+        model=settings.gemini_model_embedding,
     )
     vector_store = Chroma.from_texts(
         texts=state["resume_chunks"],

@@ -6,6 +6,8 @@ Run: pytest tests/test_resume_matcher.py -v
 import pytest
 from unittest.mock import patch, MagicMock
 
+from app_agents.resume_matcher import MatcherState
+
 
 # ── Unit Tests ────────────────────────────────────────────────────────────────
 
@@ -56,7 +58,7 @@ class TestResumeMatcherGraph:
         """load_resume node sets resume_text and resume_chunks."""
         from app_agents.resume_matcher import load_resume
 
-        initial_state = {
+        initial_state: MatcherState = {
             "resume_text": "",
             "job_descriptions": [],
             "resume_chunks": [],
@@ -70,16 +72,16 @@ class TestResumeMatcherGraph:
         assert len(result["resume_chunks"]) > 0
 
     def test_compile_results_filters_by_score(self):
-        """compile_results filters out jobs below 60% match."""
+        """compile_results filters out jobs below 30% match."""
         from app_agents.resume_matcher import compile_results
 
-        state = {
+        state: MatcherState = {
             "resume_text": "test",
             "job_descriptions": [],
             "resume_chunks": [],
             "scored_jobs": [
                 {"company": "Freshworks", "match_score": 85, "recommendation": "Apply"},
-                {"company": "LowMatch Co", "match_score": 45, "recommendation": "Skip"},
+                {"company": "LowMatch Co", "match_score": 25, "recommendation": "Skip"},
                 {"company": "Chargebee", "match_score": 72, "recommendation": "Apply"},
             ],
             "current_job_index": 3,
@@ -96,7 +98,7 @@ class TestResumeMatcherGraph:
         """compile_results returns jobs sorted highest score first."""
         from app_agents.resume_matcher import compile_results
 
-        state = {
+        state: MatcherState = {
             "resume_text": "test",
             "job_descriptions": [],
             "resume_chunks": [],
@@ -117,7 +119,7 @@ class TestResumeMatcherGraph:
         """should_continue_scoring returns 'score_job' when jobs remain."""
         from app_agents.resume_matcher import should_continue_scoring
 
-        state = {
+        state: MatcherState = {
             "job_descriptions": [{"title": "EM"}, {"title": "EM"}],
             "current_job_index": 0,
             "resume_text": "",
@@ -131,7 +133,7 @@ class TestResumeMatcherGraph:
         """should_continue_scoring returns 'compile_results' when done."""
         from app_agents.resume_matcher import should_continue_scoring
 
-        state = {
+        state: MatcherState = {
             "job_descriptions": [{"title": "EM"}, {"title": "EM"}],
             "current_job_index": 2,
             "resume_text": "",

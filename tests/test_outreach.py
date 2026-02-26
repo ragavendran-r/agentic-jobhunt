@@ -3,8 +3,10 @@ Tests for Outreach Agent (OpenAI Agents SDK)
 Run: pytest tests/test_outreach.py -v
 """
 
+import asyncio
+
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock
 
 
 # ── Unit Tests ────────────────────────────────────────────────────────────────
@@ -16,9 +18,9 @@ class TestOutreachTools:
     def test_get_candidate_profile_returns_json(self):
         """get_candidate_profile returns valid JSON string."""
         import json
-        from app_agents.outreach import get_candidate_profile
+        from app_agents.outreach import _get_candidate_profile
 
-        result = get_candidate_profile()
+        result = _get_candidate_profile()
         profile = json.loads(result)
 
         assert "name" in profile
@@ -29,9 +31,9 @@ class TestOutreachTools:
 
     def test_draft_linkedin_message_contains_company(self):
         """LinkedIn message draft contains the target company name."""
-        from app_agents.outreach import draft_linkedin_message
+        from app_agents.outreach import _draft_linkedin_message
 
-        result = draft_linkedin_message(
+        result = _draft_linkedin_message(
             company="Freshworks",
             role="Engineering Manager",
             hiring_manager="John",
@@ -44,9 +46,9 @@ class TestOutreachTools:
 
     def test_draft_linkedin_message_no_manager(self):
         """LinkedIn message handles missing hiring manager gracefully."""
-        from app_agents.outreach import draft_linkedin_message
+        from app_agents.outreach import _draft_linkedin_message
 
-        result = draft_linkedin_message(
+        result = _draft_linkedin_message(
             company="Chargebee",
             role="Engineering Manager",
             hiring_manager="",
@@ -58,9 +60,9 @@ class TestOutreachTools:
 
     def test_draft_cover_letter_contains_key_info(self):
         """Cover letter contains company, role, and key skills."""
-        from app_agents.outreach import draft_cover_letter
+        from app_agents.outreach import _draft_cover_letter
 
-        result = draft_cover_letter(
+        result = _draft_cover_letter(
             company="Kissflow",
             role="Engineering Manager",
             job_description="We need an EM with Golang and AWS experience",
@@ -73,9 +75,9 @@ class TestOutreachTools:
 
     def test_draft_cover_letter_empty_skills(self):
         """Cover letter handles empty skills list gracefully."""
-        from app_agents.outreach import draft_cover_letter
+        from app_agents.outreach import _draft_cover_letter
 
-        result = draft_cover_letter(
+        result = _draft_cover_letter(
             company="TestCo",
             role="EM",
             job_description="Generic EM role",
@@ -92,7 +94,7 @@ class TestOutreachAgent:
         """run_outreach handles empty job list gracefully."""
         from app_agents.outreach import run_outreach
 
-        result = run_outreach([], "Ragavendran")
+        result = asyncio.run(run_outreach([], "Ragavendran"))
         assert result["total_drafted"] == 0
         assert result["outreach"] == []
 
@@ -101,7 +103,8 @@ class TestOutreachAgent:
         """run_outreach returns expected dict structure."""
         mock_result = MagicMock()
         mock_result.final_output = "Draft LinkedIn message and cover letter for Freshworks..."
-        mock_runner.run_sync.return_value = mock_result
+        # Runner.run is async — must use AsyncMock
+        mock_runner.run = AsyncMock(return_value=mock_result)
 
         from app_agents.outreach import run_outreach
 
@@ -117,7 +120,7 @@ class TestOutreachAgent:
             }
         ]
 
-        result = run_outreach(sample_jobs, "Ragavendran")
+        result = asyncio.run(run_outreach(sample_jobs, "Ragavendran"))
 
         assert "outreach" in result
         assert "total_drafted" in result
@@ -129,7 +132,8 @@ class TestOutreachAgent:
         """run_outreach processes max 5 jobs even if more provided."""
         mock_result = MagicMock()
         mock_result.final_output = "Drafted messages..."
-        mock_runner.run_sync.return_value = mock_result
+        # Runner.run is async — must use AsyncMock
+        mock_runner.run = AsyncMock(return_value=mock_result)
 
         from app_agents.outreach import run_outreach
 
@@ -146,5 +150,5 @@ class TestOutreachAgent:
             for i in range(8)
         ]
 
-        result = run_outreach(many_jobs, "Ragavendran")
+        result = asyncio.run(run_outreach(many_jobs, "Ragavendran"))
         assert result["total_drafted"] <= 5
