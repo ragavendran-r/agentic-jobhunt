@@ -118,8 +118,10 @@ def score_job(state: MatcherState) -> MatcherState:
     try:
         analysis = json.loads(content)
     except json.JSONDecodeError:
-        analysis = {"match_score": 50, "recommendation": "Consider", "raw": response.content}
-
+        analysis = {"match_score": 30, "recommendation": "Consider", "raw": response.content}
+    print(
+        f"Scoring Job {idx+1}/{len(state['job_descriptions'])}: {job.get('title')} at {job.get('company')} | Score: {analysis.get('match_score', 'N/A')}% | Recommendation: {analysis.get('recommendation', 'N/A')}"
+    )
     scored_job = {**job, **analysis}
     scored_jobs = state.get("scored_jobs", []) + [scored_job]
 
@@ -133,7 +135,7 @@ def score_job(state: MatcherState) -> MatcherState:
 def compile_results(state: MatcherState) -> MatcherState:
     """Node 3: Sort results by match score and filter to recommendations."""
     scored = state["scored_jobs"]
-    filtered = [j for j in scored if j.get("match_score", 0) >= 60]
+    filtered = [j for j in scored if j.get("match_score", 0) >= 30]
     sorted_jobs = sorted(filtered, key=lambda x: x.get("match_score", 0), reverse=True)
     return {**state, "final_results": sorted_jobs}
 

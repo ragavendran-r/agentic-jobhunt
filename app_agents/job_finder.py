@@ -26,13 +26,22 @@ class JobSearchTool(BaseTool):
 
     def _run(self, query: str, location: str) -> str:
         client = TavilyClient(api_key=settings.tavily_api_key)
-        results = client.search(
-            query=f"{query} {location} job opening 2025",
-            search_depth="advanced",
-            max_results=10,
-            include_domains=["linkedin.com", "naukri.com", "wellfound.com", "indeed.com"],
-        )
-        return json.dumps(results.get("results", []), indent=2)
+        queries = [
+            f"{query} Chennai job opening 2026",
+            f"{query} remote India job 2026 engineering leadership",
+            f"{query} Chennai remote opportunity 2026",
+            f"{query} India hiring 2026 {query}",
+        ]
+        results = []
+        for q in queries:
+            r = client.search(
+                query=q,
+                search_depth="advanced",
+                max_results=15,
+                include_raw_content=True,
+            )
+            results.extend(r.get("results", []))
+        return json.dumps(results, indent=2)
 
 
 # ── CrewAI Agents ────────────────────────────────────────────────────────────
@@ -59,7 +68,7 @@ def build_crew(role: str, location: str, tech_stack: list[str], min_salary: int)
     analyst = Agent(
         role="Job Fit Analyst",
         goal=(
-            f"Filter job listings to only those matching: "
+            f"Filter job listings to those matching as much as possible: "
             f"role={role}, tech={tech_stack}, min_salary=₹{min_salary:,}, location={location}"
         ),
         backstory=(
@@ -100,7 +109,7 @@ def build_crew(role: str, location: str, tech_stack: list[str], min_salary: int)
             f"Rank by seniority and relevance to software engineering leadership."
         ),
         expected_output=(
-            "A ranked JSON list (max 10) of filtered jobs with fields: "
+            "A ranked JSON list (max 5) of filtered jobs with fields: "
             "title, company, location, url, salary, description, source, fit_reason"
         ),
         agent=analyst,

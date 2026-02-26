@@ -154,6 +154,7 @@ async def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
 
     outreach_list = []
     for job in matched_jobs[:5]:
+        print(f"Processing outreach for {job.get('company')} - {job.get('title')}")
         outreach_list.append(
             {
                 "company": job.get("company"),
@@ -164,6 +165,7 @@ async def run_outreach(matched_jobs: list[dict], candidate_name: str) -> dict:
             }
         )
 
+    print(f"Drafted outreach for jobs:  {outreach_list}")
     return {
         "outreach": outreach_list,
         "total_drafted": len(outreach_list),

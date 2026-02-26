@@ -34,7 +34,7 @@ User Input (Job Preferences)
 
 - **Language:** Python 3.11+
 - **Frameworks:** Google ADK, CrewAI, LangGraph, OpenAI Agents SDK, LangChain
-- **LLMs:** Gemini 2.5 Flash (ADK/CrewAI), GPT-4o (OpenAI SDK)
+- **LLMs:** Gemini 2.5 Flash (ADK/CrewAI), GPT-4o-mini (OpenAI SDK)
 - **Vector Store:** ChromaDB (resume + JD embeddings)
 - **Storage:** SQLite (job application tracking)
 - **Search:** Tavily Search API

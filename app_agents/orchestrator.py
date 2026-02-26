@@ -9,6 +9,7 @@ from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+from requests import session
 
 from app_agents.job_finder import run_job_finder
 from app_agents.resume_matcher import run_resume_matcher
@@ -22,9 +23,10 @@ from config.settings import settings
 
 def find_jobs(role: str, location: str, tech_stack: list[str], min_salary: int) -> dict:
     """Find matching jobs from LinkedIn, Naukri, and Wellfound."""
-    return run_job_finder(
+    result = run_job_finder(
         role=role, location=location, tech_stack=tech_stack, min_salary=min_salary
     )
+    return result["jobs"]
 
 
 def match_resume(job_descriptions: list[dict], resume_path: str) -> dict:
@@ -53,18 +55,21 @@ orchestrator_agent = Agent(
         "against the candidate's resume, draft outreach messages, and track applications."
     ),
     instruction="""
-        You are a job search assistant for an experienced Engineering Manager.
-        
-        When given job search preferences, follow this workflow in order:
-        1. Call find_jobs to discover relevant openings matching the criteria
-        2. Call match_resume to score each job against the candidate's resume
-        3. Filter to jobs with a match score >= 60%
-        4. Call draft_outreach to create personalized messages for top matches
-        5. Call track_applications to log everything to the database
-        6. Return a clear summary: jobs found, top matches, and next actions
-        
-        Always be concise and action-oriented in your final summary.
-    """,
+        You are a job search assistant. You MUST call ALL four tools in strict order. Do not stop early.
+
+        STEP 1: Call find_jobs to discover relevant openings matching the criteria
+        STEP 2: Call match_resume to score each job from Step 1 against the candidate's resume in the resume_path from the user prompt.
+        STEP 3: Call draft_outreach with the matched jobs from Step 2 and the candidate_name from the user prompt.
+        STEP 4: Call track_applications with the final jobs list.
+        STEP 5: Write a final summary covering:
+        - How many jobs were found
+        - Top matches with title, company, url, match score
+        - For EACH job, include the FULL outreach message text returned by draft_outreach
+          (LinkedIn message AND cover letter — copy the full content, do not summarize it)
+        - Next actions
+
+        YOU MUST COMPLETE ALL 5 STEPS. Do not return a response before calling all four tools.
+        """,
     tools=[find_jobs, match_resume, draft_outreach, track_applications],
 )
 
@@ -111,7 +116,7 @@ class JobHuntOrchestrator:
         - Role: {preferences.get('role', 'Engineering Manager')}
         - Location: {preferences.get('location', 'Chennai, Remote')}
         - Tech Stack: {preferences.get('tech_stack', [])}
-        - Minimum Salary: ₹{preferences.get('min_salary', 7000000):,}
+        - Minimum Salary: ₹{preferences.get('min_salary', 0):,}
         - Resume: {preferences.get('resume_path', settings.resume_path)}
         - Candidate: {preferences.get('candidate_name', 'Candidate')}
         """
@@ -122,12 +127,30 @@ class JobHuntOrchestrator:
             session_id=session.id,
             new_message=types.Content(role="user", parts=[types.Part(text=prompt)]),
         ):
+            print(
+                f"[{event.author}] final={event.is_final_response()} | has_content={bool(event.content)}"
+            )  # temporary debug
             if event.is_final_response() and event.content and event.content.parts:
                 for part in event.content.parts:
                     if hasattr(part, "text"):
                         result_text += part.text or ""
+                    if hasattr(part, "function_call") and part.function_call:
+                        print(f"  → TOOL CALL: {part.function_call.name}")
+                    if hasattr(part, "function_response") and part.function_response:
+                        print(f"  ← TOOL RESP: {part.function_response.name} success")
+        # After loop: if orchestrator gave nothing, collect from session state instead
+        if not result_text:
+            session = await self.session_service.get_session(
+                app_name="agentic-jobhunt", user_id="user_001", session_id=session.id
+            )
+            if session:
+                result_text = str(session.state.get("summary") or session.state)
 
-        return {"summary": result_text}
+        # Join the list to form the final string
+        full_response = "".join(result_text).strip()
+        # If result_text is still empty, it means the agent called tools
+        # but never wrote a concluding summary.
+        return {"summary": full_response or "Task complete, but no summary was generated."}
 
 
 # ── CLI Entry ────────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # Model names
     gemini_model: str = "gemini-2.5-flash"
     gemini_model_crew: str = "gemini/gemini-2.5-flash"
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-4o-mini"
 
     class Config:
         env_file = ".env"

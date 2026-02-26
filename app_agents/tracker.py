@@ -142,7 +142,7 @@ def get_application_summary() -> str:
         for app in apps:
             summary["by_status"][app.status] = summary["by_status"].get(app.status, 0) + 1
             score = cast(Optional[float], app.match_score)
-            if score is not None and score >= 75:
+            if score is not None and score >= 30:
                 summary["top_matches"].append(
                     {
                         "company": app.company,
@@ -226,7 +226,7 @@ def run_tracker(jobs: list[dict]) -> dict:
             for j in jobs[:10]
         ]
     )
-
+    print(f"Logging the following jobs:\n{jobs_text}")
     result = agent.invoke(
         {
             "messages": [
