@@ -8,7 +8,7 @@ A personal Agentic AI system that autonomously finds, evaluates, and helps apply
 
 ## 🏗️ Architecture
 
-[View Architecture](https://ragavendran-r.github.io/agentic-jobhunt/docs/architecture.html)
+[View Architecture](https://ragavendran-r.github.io/agentic-jobhunt/blob/main/docs/architecture.html)
 
 ![Architecture](docs/agentic-jobhunt-arch.png)
 
