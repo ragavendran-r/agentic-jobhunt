@@ -42,20 +42,6 @@ def extract_resume_text(resume_path: str) -> str:
         return "\n".join(page.extract_text() for page in reader.pages)
 
 
-def build_vector_store(resume_text: str) -> Chroma:
-    """Chunk resume and store in ChromaDB for RAG retrieval."""
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = splitter.split_text(resume_text)
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model=settings.gemini_model_embedding,
-    )
-    return Chroma.from_texts(
-        texts=chunks,
-        embedding=embeddings,
-        persist_directory=settings.chroma_path,
-    )
-
-
 # ── Graph Nodes ───────────────────────────────────────────────────────────────
 
 
